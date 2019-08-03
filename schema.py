@@ -1,12 +1,13 @@
 import graphene
 import json
-from datetime import datetime
 import uuid
+from datetime import datetime
+
 
 class User(graphene.ObjectType):
   id = graphene.ID(default_value=str(uuid.uuid4()))
   username = graphene.String()
-  created_at = graphene.DateTime(default_value=datetime.now)
+  created_at = graphene.DateTime(default_value=(datetime.now()))
 
 class Query(graphene.ObjectType):
   # arguments for queries
@@ -22,9 +23,9 @@ class Query(graphene.ObjectType):
 
   def resolve_users(self, info, limit=None):
     return [
-      User(id="1", username="Fred", created_at=datetime.now()),
+      User(username="Fred"),
       User(id="2", username="Ryan", created_at=datetime.now()),
-      User(id="2", username="George", created_at=datetime.now())
+      User(id="3", username="George", created_at=datetime.now())
     ][:limit]
 
 class CreateUser(graphene.Mutation):
@@ -47,7 +48,7 @@ result = schema.execute(
   '''
   mutation {
     createUser(username: "Francisco") {
-      user { 
+      user {
         id
         username
         createdAt
