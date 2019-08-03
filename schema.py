@@ -4,10 +4,19 @@ import uuid
 from datetime import datetime
 
 
+# to run, cd into folder, run pipenv shell, then command 'python schema.py'
+class Post(graphene.ObjectType):
+  title = graphene.String()
+  content = graphene.String()
+
 class User(graphene.ObjectType):
   id = graphene.ID(default_value=str(uuid.uuid4()))
   username = graphene.String(default_value="George")
   created_at = graphene.DateTime(default_value=(datetime.now()))
+  avatar_url = graphene.String()
+
+  def resolve_avatar_url(self, info):
+    return 'https://cloudinary.com/{}/{}'.format(self.username, self.id)
 
 class Query(graphene.ObjectType):
   # arguments for queries
@@ -23,9 +32,9 @@ class Query(graphene.ObjectType):
 
   def resolve_users(self, info, limit=None):
     return [
-      User(id="1", username="Fred", created_at=datetime.now()),
-      User(id="2", username="Ryan", created_at=datetime.now()),
-      User(id="3", username="George", created_at=datetime.now())
+      User(username="Fred"),
+      User(username="Ryan"),
+      User(username="George")
     ][:limit]
 
 class CreateUser(graphene.Mutation):
@@ -38,25 +47,42 @@ class CreateUser(graphene.Mutation):
     user = User(username=username)
     return CreateUser(user=user)
 
+class CreatePost(graphene.Mutation):
+  # declare post field
+  post = graphene.Field(Post)
+
+  # arguments
+  class Arguments:
+    title = graphene.String()
+    content = graphene.String()
+
+
+  def mutate(self, info, title, content):
+    if info.context.get('is_anonymous'):
+      raise Exception('Not Authenticated!')
+    post =  Post(title=title, content=content)
+    return CreatePost(post=post)
+
 class Mutation(graphene.ObjectType):
   create_user = CreateUser.Field()
+  create_post = CreatePost.Field()
 
 
 schema = graphene.Schema(query=Query, mutation=Mutation)
 
 result = schema.execute(
   '''
-  mutation ($username: String) {
-    createUser(username: $username) {
-      user {
-        id
-        username
-        createdAt
-      }
+  {
+    users {
+      id
+      createdAt
+      username
+      avatarUrl
     }
   }
   ''',
-  variable_values={ 'username': 'Dave' }
+  context={ 'is_anonymous': True }
+  # variable_values={ 'limit': 1 }
 )
 
 dictResult = dict(result.data.items())
